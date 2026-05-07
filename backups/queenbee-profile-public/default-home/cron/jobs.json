@@ -1,0 +1,49 @@
+{
+  "jobs": [
+    {
+      "id": "a8ef79987d87",
+      "name": "HiveMind EOD code review cleanup + one small feature",
+      "prompt": "You are running an autonomous end-of-day HiveMind Operator code review and small-improvement pass for Mark Rubin.\n\nRepository: $HOME/hivemind-operator\nBranch policy:\n- Work in the existing repo. Do not push to GitHub.\n- If the working tree is dirty when you start, do NOT overwrite or reset user work. Classify it first.\n- Prefer creating a task branch named chore/eod-review-YYYYMMDD if not already on a task branch.\n- Commit only if changes are coherent, tests pass, and no secrets/PII are staged.\n\nMandatory workflow:\n1. Load relevant skills if available: hivemind-operator-local-dev, requesting-code-review, systematic-debugging, test-driven-development.\n2. Inspect repo status, recent commits, and changed/untracked files.\n3. Run `.venv/bin/python -m pytest -q` from $HOME/hivemind-operator.\n4. Do a focused cleanup pass:\n   - remove/ignore generated junk if safe\n   - fix one obvious flaky test, warning, typo, dead marker, or small maintainability issue\n   - do NOT run live scrapes, MoeGo actions, browser automation, cron edits, external messages, or destructive cleanup\n5. Add exactly one small feature or improvement ONLY if it is low-risk and testable in under ~45 minutes. Good examples: a small health/status endpoint field, a tiny UI affordance, a test-backed parser improvement, an extra safety check. Bad examples: major refactor, new product surface, auth changes, data migrations, Git history rewrite.\n6. Use TDD where changing behavior: add/update a test, run it red if practical, implement minimally, then run target tests and full pytest.\n7. Run a pre-commit review/security scan against staged diff. Do not stage private generated data, customer threads, media outputs, DBs, logs, or secrets.\n8. If verification passes, commit with a conventional message. Do not push.\n9. Final report back to Mark with:\n   - starting branch and final branch\n   - tests result\n   - files changed/committed\n   - commit hash if committed\n   - anything intentionally left untouched\n   - recommendation for tomorrow\n\nSafety rules:\n- Stop and report if auth failures, missing venv, test suite broken before changes, or suspicious PII/secrets appear.\n- Prefer no commit over a sloppy commit.\n- Keep the final response concise but evidence-based.",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "base_url": null,
+      "script": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "30 17 * * 1-5",
+        "display": "30 17 * * 1-5"
+      },
+      "schedule_display": "30 17 * * 1-5",
+      "repeat": {
+        "times": null,
+        "completed": 4
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-04-23T20:08:11.065764-04:00",
+      "next_run_at": "2026-04-30T17:30:00-04:00",
+      "last_run_at": "2026-04-29T17:30:40.858542-04:00",
+      "last_status": "error",
+      "last_error": "RuntimeError: Codex token refresh failed with status 401. Run `hermes model` to re-authenticate.",
+      "last_delivery_error": "[REDACTED]"
+      "deliver": "[REDACTED]"
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "[REDACTED]"
+        "chat_name": "Mark Rubin",
+        "thread_id": null
+      },
+      "enabled_toolsets": [
+        "terminal",
+        "file",
+        "delegation",
+        "skills"
+      ]
+    }
+  ],
+  "updated_at": "2026-04-29T17:30:40.859751-04:00"
+}

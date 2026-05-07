@@ -1,0 +1,29 @@
+{
+  "updated_at": "2026-04-29T18:18:44.854486",
+  "platforms": {
+    "telegram": [
+      {
+        "id": "[REDACTED_PHONE]",
+        "name": "Mark Rubin",
+        "type": "dm",
+        "thread_id": null
+      }
+    ],
+    "discord": [],
+    "whatsapp": [],
+    "slack": [],
+    "signal": [],
+    "mattermost": [],
+    "matrix": [],
+    "homeassistant": [],
+    "email": [REDACTED]
+    "sms": [],
+    "dingtalk": [],
+    "feishu": [],
+    "wecom": [],
+    "wecom_callback": [],
+    "weixin": [],
+    "bluebubbles": [],
+    "qqbot": []
+  }
+}
