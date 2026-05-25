@@ -114,7 +114,9 @@ _GATEWAY_PROVIDER_POLICY_RE = re.compile(
 )
 
 _GATEWAY_AUTH_ERROR_RE = re.compile(
-    r"(provider\s+authentication\s+failed|incorrect\s+api\s+key|invalid\s+api\s+key|\b401\b)",
+    r"(provider\s+authentication\s+failed|incorrect\s+api\s+key|invalid\s+api\s+key|\b401\b|"
+    r"refresh\s+token\s+(?:was\s+)?(?:already\s+)?consumed|"
+    r"refresh\s+token\s+(?:has\s+)?already\s+been\s+used)",
     re.IGNORECASE,
 )
 
@@ -197,11 +199,17 @@ def _looks_like_gateway_provider_error(text: str) -> bool:
     if not text:
         return False
     body = str(text).strip()
-    # Provider failure envelopes are short. Assistant answers that happen
+    # Explicit provider/auth envelopes are infrastructure failures even when
+    # the provider appended long re-auth instructions.  Those details belong
+    # in logs, not Telegram chat.
+    if _GATEWAY_PROVIDER_ERROR_SHAPE_RE.search(body) or _GATEWAY_AUTH_ERROR_RE.search(body):
+        return True
+
+    # Provider failure envelopes are usually short. Assistant answers that happen
     # to mention HTTP status codes ("HTTP 404 means...") tend to be longer.
     if len(body) > 400 or body.count("\n") > 4:
         return False
-    return bool(_GATEWAY_PROVIDER_ERROR_SHAPE_RE.search(body))
+    return bool(_GATEWAY_PROVIDER_ERROR_RE.search(body))
 
 
 def _sanitize_gateway_final_response(platform: Any, text: str) -> str:

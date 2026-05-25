@@ -75,6 +75,26 @@ def test_telegram_final_response_redacts_auth_secrets():
     assert "sk-live" not in sanitized
 
 
+def test_telegram_final_response_sanitizes_long_codex_auth_failure():
+    """Long OAuth re-auth instructions should not be dumped into Telegram."""
+    raw = (
+        "⚠️ Provider authentication failed: Codex refresh token was already consumed "
+        "by another client. OpenAI/Codex refresh tokens are single-use; another "
+        "process likely refreshed it without persisting the rotated token back.\n\n"
+        "Run `codex` in a terminal, then run `hermes auth`, then run `hermes model` "
+        "and pick OpenAI Codex again. This internal operator guidance should stay "
+        "out of mobile chat because it is noisy and not useful for the end user."
+    )
+
+    sanitized = _sanitize_gateway_final_response(Platform.TELEGRAM, raw)
+
+    assert "authentication failed" in sanitized.lower()
+    assert "gateway logs" in sanitized.lower()
+    assert "codex refresh token" not in sanitized.lower()
+    assert "hermes auth" not in sanitized.lower()
+    assert "hermes model" not in sanitized.lower()
+
+
 def test_telegram_final_response_keeps_normal_answers():
     """Normal assistant content should not be rewritten."""
     answer = "Here is the clean summary you asked for."
