@@ -3837,6 +3837,18 @@ class GatewayRunner:
         for platform, platform_config in self.config.platforms.items():
             if not platform_config.enabled:
                 continue
+            if not self.config._is_platform_connected(platform, platform_config):
+                logger.info(
+                    "Skipping %s: enabled in config but not configured",
+                    platform.value,
+                )
+                self._update_platform_runtime_status(
+                    platform.value,
+                    platform_state="disabled",
+                    error_code=None,
+                    error_message="enabled but not configured",
+                )
+                continue
             enabled_platform_count += 1
             
             adapter = self._create_adapter(platform, platform_config)
