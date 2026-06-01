@@ -149,6 +149,12 @@ I/O/network/DB, off-by-one errors, race conditions, code contradicts intent.
 
 SUGGESTIONS (non-blocking): missing tests, style, performance, naming.
 
+EVIDENCE-FIRST REVIEW RULES:
+- Report a finding only when you can cite the exact changed line, the surrounding context inspected, and a concrete failure mode.
+- HIGH/CRITICAL requires an executable or logically unavoidable failure scenario, not vibe.
+- If confidence is below 80%, demote to suggestion or omit.
+- A clean review is a valid review. Do not manufacture findings to appear rigorous.
+
 <static_scan_results>
 [INSERT ANY FINDINGS FROM STEP 2]
 </static_scan_results>
