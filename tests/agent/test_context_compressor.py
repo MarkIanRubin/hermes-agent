@@ -77,6 +77,40 @@ class TestCompress:
         # Abort flag must NOT fire under the default config.
         assert compressor._last_compress_aborted is False
         assert compressor._last_summary_fallback_used is True
+        joined = "\n".join(str(m.get("content", "")) for m in result)
+        assert "Summary generation was unavailable" not in joined
+        assert "deterministic extractive summary" in joined
+
+    def test_deterministic_fallback_preserves_recent_actions_without_llm(self):
+        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=0, protect_last_n=2)
+
+        msgs = [
+            {"role": "system", "content": "System prompt"},
+            {"role": "user", "content": "Build the report in /tmp/report.md"},
+            {"role": "assistant", "content": "Reading files", "tool_calls": [
+                {"id": "call_1", "function": {"name": "read_file", "arguments": "{\"path\": \"/tmp/report.md\", \"offset\": 1}"}}
+            ]},
+            {"role": "tool", "tool_call_id": "call_1", "content": "Report draft content"},
+            {"role": "assistant", "content": "Found the draft."},
+            {"role": "user", "content": "Fix this timeout error."},
+            {"role": "assistant", "content": "Checking logs."},
+            {"role": "user", "content": "tail user kept live"},
+            {"role": "assistant", "content": "tail assistant kept live"},
+            {"role": "user", "content": "latest tail kept live"},
+        ]
+
+        with patch("agent.context_compressor.call_llm", side_effect=Exception("Codex auxiliary Responses stream exceeded 120.0s total timeout")):
+            result = c.compress(msgs)
+
+        joined = "\n".join(str(m.get("content", "")) for m in result)
+        assert "Summary generation was unavailable" not in joined
+        assert "deterministic extractive summary" in joined
+        assert "Fix this timeout error." in joined
+        assert "[read_file] read /tmp/report.md" in joined
+        assert "Codex auxiliary Responses stream exceeded" in joined
+        assert c._last_summary_dropped_count == 0
+        assert c._last_summary_fallback_used is True
 
     def test_compression_increments_count(self, compressor):
         msgs = self._make_messages(10)
@@ -724,9 +758,8 @@ class TestAuxModelFallbackSurfacedToCallers:
 
 class TestSummaryFailureTrackingForGatewayWarning:
     """Default behavior (compression.abort_on_summary_failure=False):
-    summary-generation failure inserts a static fallback placeholder and
-    records dropped count + fallback flag so gateway hygiene & /compress
-    can surface a visible warning."""
+    summary-generation failure inserts a deterministic extractive summary and
+    records fallback use without claiming context was dropped unsummarized."""
 
     def test_compress_records_fallback_and_dropped_count_on_summary_failure(self):
         with patch("agent.context_compressor.get_model_context_length", return_value=100000):
@@ -747,14 +780,12 @@ class TestSummaryFailureTrackingForGatewayWarning:
             result = c.compress(msgs)
 
         assert c._last_summary_fallback_used is True
-        assert c._last_summary_dropped_count > 0
-        assert c._last_summary_error is not None
-        # Default mode: abort flag must NOT fire.
+        assert c._last_summary_dropped_count == 0
         assert c._last_compress_aborted is False
-        assert any(
-            isinstance(m.get("content"), str) and "Summary generation was unavailable" in m["content"]
-            for m in result
-        )
+        assert len(result) < len(msgs)
+        joined = "\n".join(str(m.get("content", "")) for m in result)
+        assert "Summary generation was unavailable" not in joined
+        assert "deterministic extractive summary" in joined
 
     def test_compress_clears_fallback_flag_on_subsequent_success(self):
         mock_response = MagicMock()
