@@ -1375,6 +1375,28 @@ def _should_clear_resume_pending_after_turn(agent_result: dict) -> bool:
     return True
 
 
+def _consume_resume_pending_note(session_store: Any, session_key: str | None, should_inject: bool) -> bool:
+    """Consume the restart-resume marker when its user-facing note is injected.
+
+    The note is a one-shot recovery hint for the next user turn after a gateway
+    restart/shutdown interruption.  Leaving ``resume_pending`` set until a fully
+    successful model turn means provider failures, queued commands, or repeated
+    gateway restarts can prepend the same scary system note to several future
+    prompts.  Consume it at injection time; if the new turn is interrupted again,
+    shutdown marking will set ``resume_pending`` again for that fresh failure.
+    """
+    if not should_inject or not session_key or session_store is None:
+        return False
+    try:
+        return bool(session_store.clear_resume_pending(session_key))
+    except Exception as exc:
+        logger.debug(
+            "clear_resume_pending after note injection failed for %s: %s",
+            session_key, exc,
+        )
+        return False
+
+
 def _preserve_queued_followup_history_offset(
     current_result: dict,
     followup_result: dict,
@@ -16650,7 +16672,9 @@ class GatewayRunner:
             # escalates the wording — the transcript's last role may be
             # anything (tool, assistant with unfinished work, etc.), so we
             # give a stronger, reason-aware instruction that subsumes the
-            # tool-tail case.
+            # tool-tail case.  The marker is consumed when this note is
+            # injected so provider failures or queued commands do not spam
+            # the same restart note across multiple future user messages.
             #
             # Freshness gate (#16802): both branches are gated on the age
             # of the last persisted transcript row.  That is the correct
@@ -16687,6 +16711,11 @@ class GatewayRunner:
 
             if _is_resume_pending:
                 _reason = getattr(_resume_entry, "resume_reason", None) or "restart_timeout"
+                _consume_resume_pending_note(
+                    self.session_store,
+                    session_key,
+                    should_inject=True,
+                )
                 _reason_phrase = (
                     "a gateway restart"
                     if _reason == "restart_timeout"

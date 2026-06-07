@@ -37,6 +37,7 @@ from gateway.platforms.base import MessageEvent, MessageType, SendResult
 from gateway.run import (
     _auto_continue_freshness_window,
     _coerce_gateway_timestamp,
+    _consume_resume_pending_note,
     _is_fresh_gateway_interruption,
     _last_transcript_timestamp,
     _should_clear_resume_pending_after_turn,
@@ -68,6 +69,35 @@ def test_resume_pending_is_cleared_only_after_successful_turn():
     assert _should_clear_resume_pending_after_turn({"failed": True}) is False
     assert _should_clear_resume_pending_after_turn({"partial": True}) is False
     assert _should_clear_resume_pending_after_turn({"error": "boom"}) is False
+
+
+def test_resume_pending_note_is_consumed_when_injected(tmp_path):
+    """The restart system note is one-shot, not repeated after every failure.
+
+    The gateway still marks a session resume-pending again if a fresh shutdown
+    interrupts the next turn, but once the recovery note has been added to a
+    prompt the old marker is consumed.  This prevents scary restart notes from
+    riding along with unrelated queued commands for the rest of the freshness
+    window.
+    """
+    store = _make_store(tmp_path)
+    entry = store.get_or_create_session(_make_source())
+    assert store.mark_resume_pending(entry.session_key) is True
+
+    assert _consume_resume_pending_note(store, entry.session_key, should_inject=True) is True
+    assert store._entries[entry.session_key].resume_pending is False
+    assert store._entries[entry.session_key].resume_reason is None
+
+    assert _consume_resume_pending_note(store, entry.session_key, should_inject=True) is False
+
+
+def test_resume_pending_note_consume_is_guarded(tmp_path):
+    store = _make_store(tmp_path)
+    entry = store.get_or_create_session(_make_source())
+    assert store.mark_resume_pending(entry.session_key) is True
+
+    assert _consume_resume_pending_note(store, entry.session_key, should_inject=False) is False
+    assert store._entries[entry.session_key].resume_pending is True
 
 
 def _make_source(platform=Platform.TELEGRAM, chat_id="123", user_id="u1"):
