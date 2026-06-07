@@ -99,6 +99,17 @@ TOOLSETS = {
         "tools": ["x_search"],
         "includes": []
     },
+
+    "xurl": {
+        "description": (
+            "Official X/Twitter API access through the xurl CLI. Supports "
+            "social graph reads, timelines, mentions, posts, DMs, and raw "
+            "v2 endpoints when xurl is installed and authenticated. Off by "
+            "default; enable only when X API access is needed."
+        ),
+        "tools": ["xurl"],
+        "includes": []
+    },
     
     "vision": {
         "description": "Image analysis and vision tools",
