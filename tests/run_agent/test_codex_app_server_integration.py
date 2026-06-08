@@ -70,6 +70,44 @@ class TestApiModeAccepted:
         assert agent.api_mode == "codex_app_server"
 
 
+class TestCodexAppServerConfig:
+    def test_remote_command_config_is_loaded(self, monkeypatch):
+        from agent import codex_runtime
+        import hermes_cli.config as config_mod
+
+        monkeypatch.setattr(
+            config_mod,
+            "load_config",
+            lambda: {
+                "model": {
+                    "codex_app_server": {
+                        "command": ["ssh", "queenbee", "codex", "app-server"],
+                        "codex_home": "/Users/queenbee/.codex",
+                    }
+                }
+            },
+        )
+
+        assert codex_runtime._codex_app_server_options() == {
+            "app_server_command": ["ssh", "queenbee", "codex", "app-server"],
+            "codex_home": "/Users/queenbee/.codex",
+        }
+
+    def test_legacy_flat_remote_command_config_is_loaded(self, monkeypatch):
+        from agent import codex_runtime
+        import hermes_cli.config as config_mod
+
+        monkeypatch.setattr(
+            config_mod,
+            "load_config",
+            lambda: {"model": {"codex_app_server_command": "ssh queenbee codex app-server"}},
+        )
+
+        assert codex_runtime._codex_app_server_options() == {
+            "app_server_command": "ssh queenbee codex app-server"
+        }
+
+
 class TestRunConversationCodexPath:
     def test_run_conversation_returns_codex_shape(self, fake_session):
         agent = _make_codex_agent()

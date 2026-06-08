@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import shlex
 import subprocess
 import threading
 import time
@@ -70,6 +71,7 @@ class CodexAppServerClient:
         self,
         codex_bin: str = "codex",
         codex_home: Optional[str] = None,
+        app_server_command: Optional[list[str] | str] = None,
         extra_args: Optional[list[str]] = None,
         env: Optional[dict[str, str]] = None,
     ) -> None:
@@ -110,7 +112,17 @@ class CodexAppServerClient:
                 ]
             )
 
-        cmd = [codex_bin, "app-server"] + app_server_args
+        if app_server_command:
+            if isinstance(app_server_command, str):
+                cmd = shlex.split(app_server_command)
+            else:
+                cmd = [str(part) for part in app_server_command]
+            if app_server_args:
+                cmd.extend(app_server_args)
+        else:
+            cmd = [codex_bin, "app-server"] + app_server_args
+        if not cmd:
+            raise ValueError("codex app-server command is empty")
         # Codex emits tracing to stderr; default WARN keeps it quiet for users.
         spawn_env.setdefault("RUST_LOG", "warn")
 

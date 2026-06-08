@@ -242,6 +242,84 @@ class TestSpawnEnvIsolation:
         # And HOME still passes through unchanged
         assert captured["env"].get("HOME") == "/users/alice"
 
+    def test_custom_app_server_command_is_used_as_exact_command(self, monkeypatch):
+        """A configured command can point at a remote/wrapper app-server.
+
+        Hermes must not append a second `app-server` when the full command is
+        supplied, otherwise an ssh wrapper like `ssh queenbee codex app-server`
+        becomes garbage.
+        """
+        import subprocess
+        from agent.transports import codex_app_server as cas
+
+        captured = {}
+
+        class FakePopen:
+            def __init__(self, cmd, *args, **kwargs):
+                captured["cmd"] = list(cmd)
+                self.stdin = None
+                self.stdout = None
+                self.stderr = None
+                self.pid = 1
+                self.returncode = None
+
+            def poll(self):
+                return None
+
+            def terminate(self):
+                pass
+
+            def wait(self, timeout=None):
+                return 0
+
+            def kill(self):
+                pass
+
+        monkeypatch.setattr(subprocess, "Popen", FakePopen)
+
+        client = cas.CodexAppServerClient(
+            app_server_command=["ssh", "queenbee", "codex", "app-server"]
+        )
+        client._closed = True
+
+        assert captured["cmd"] == ["ssh", "queenbee", "codex", "app-server"]
+
+    def test_custom_app_server_command_string_is_split(self, monkeypatch):
+        import subprocess
+        from agent.transports import codex_app_server as cas
+
+        captured = {}
+
+        class FakePopen:
+            def __init__(self, cmd, *args, **kwargs):
+                captured["cmd"] = list(cmd)
+                self.stdin = None
+                self.stdout = None
+                self.stderr = None
+                self.pid = 1
+                self.returncode = None
+
+            def poll(self):
+                return None
+
+            def terminate(self):
+                pass
+
+            def wait(self, timeout=None):
+                return 0
+
+            def kill(self):
+                pass
+
+        monkeypatch.setattr(subprocess, "Popen", FakePopen)
+
+        client = cas.CodexAppServerClient(
+            app_server_command="ssh queenbee codex app-server"
+        )
+        client._closed = True
+
+        assert captured["cmd"] == ["ssh", "queenbee", "codex", "app-server"]
+
     def test_kanban_worker_adds_only_kanban_writable_root(self, monkeypatch):
         """Codex-runtime Kanban workers need to write board state outside
         their scratch/worktree workspace, but should not fall back to

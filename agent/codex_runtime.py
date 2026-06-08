@@ -25,6 +25,53 @@ from typing import Any, Dict, List
 logger = logging.getLogger(__name__)
 
 
+def _codex_app_server_options() -> dict[str, Any]:
+    """Return optional config for the spawned Codex app-server.
+
+    Default behavior stays local: `codex app-server`. Power users can point
+    Hermes at a wrapper or remote stdio command, for example:
+
+        model:
+          openai_runtime: codex_app_server
+          codex_app_server:
+            command: ["ssh", "queenbee", "codex", "app-server"]
+
+    The command is treated as the complete app-server command; Hermes does not
+    append `app-server` when it is supplied.
+    """
+    try:
+        from hermes_cli.config import load_config
+
+        config = load_config()
+    except Exception:
+        return {}
+
+    model_cfg = config.get("model") if isinstance(config, dict) else None
+    if not isinstance(model_cfg, dict):
+        return {}
+
+    nested = model_cfg.get("codex_app_server")
+    if not isinstance(nested, dict):
+        nested = {}
+
+    opts: dict[str, Any] = {}
+    command = nested.get("command", model_cfg.get("codex_app_server_command"))
+    if isinstance(command, list) and command:
+        opts["app_server_command"] = [str(part) for part in command]
+    elif isinstance(command, str) and command.strip():
+        opts["app_server_command"] = command.strip()
+
+    codex_home = nested.get("codex_home", model_cfg.get("codex_app_server_home"))
+    if isinstance(codex_home, str) and codex_home.strip():
+        opts["codex_home"] = codex_home.strip()
+
+    codex_bin = nested.get("binary", model_cfg.get("codex_binary"))
+    if isinstance(codex_bin, str) and codex_bin.strip():
+        opts["codex_bin"] = codex_bin.strip()
+
+    return opts
+
+
 def run_codex_app_server_turn(
     agent,
     *,
@@ -59,6 +106,7 @@ def run_codex_app_server_turn(
         agent._codex_session = CodexAppServerSession(
             cwd=cwd,
             approval_callback=approval_callback,
+            **_codex_app_server_options(),
         )
 
     # NOTE: the user message is ALREADY appended to messages by the
