@@ -25,6 +25,22 @@ from typing import Any, Dict, List
 logger = logging.getLogger(__name__)
 
 
+def _coerce_command(value: Any) -> list[str] | str | None:
+    if isinstance(value, list) and value:
+        return [str(part) for part in value]
+    if isinstance(value, str) and value.strip():
+        raw = value.strip()
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+            except Exception:
+                parsed = None
+            if isinstance(parsed, list) and parsed:
+                return [str(part) for part in parsed]
+        return raw
+    return None
+
+
 def _codex_app_server_options() -> dict[str, Any]:
     """Return optional config for the spawned Codex app-server.
 
@@ -55,11 +71,11 @@ def _codex_app_server_options() -> dict[str, Any]:
         nested = {}
 
     opts: dict[str, Any] = {}
-    command = nested.get("command", model_cfg.get("codex_app_server_command"))
-    if isinstance(command, list) and command:
-        opts["app_server_command"] = [str(part) for part in command]
-    elif isinstance(command, str) and command.strip():
-        opts["app_server_command"] = command.strip()
+    command = _coerce_command(
+        nested.get("command", model_cfg.get("codex_app_server_command"))
+    )
+    if command:
+        opts["app_server_command"] = command
 
     codex_home = nested.get("codex_home", model_cfg.get("codex_app_server_home"))
     if isinstance(codex_home, str) and codex_home.strip():

@@ -93,18 +93,24 @@ class TestCodexAppServerConfig:
             "codex_home": "/Users/queenbee/.codex",
         }
 
-    def test_legacy_flat_remote_command_config_is_loaded(self, monkeypatch):
+    def test_json_string_remote_command_config_is_loaded(self, monkeypatch):
         from agent import codex_runtime
         import hermes_cli.config as config_mod
 
         monkeypatch.setattr(
             config_mod,
             "load_config",
-            lambda: {"model": {"codex_app_server_command": "ssh queenbee codex app-server"}},
+            lambda: {
+                "model": {
+                    "codex_app_server": {
+                        "command": '["ssh", "queenbee", "codex", "app-server"]'
+                    }
+                }
+            },
         )
 
         assert codex_runtime._codex_app_server_options() == {
-            "app_server_command": "ssh queenbee codex app-server"
+            "app_server_command": ["ssh", "queenbee", "codex", "app-server"]
         }
 
 
